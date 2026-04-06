@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FinanceFlow – Personal Finance Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.10.1/Recharts.min.js"></script>
+<style>
+/* ──────────────────────────────────────────
+   CSS VARIABLES & THEME
+────────────────────────────────────────── */
+:root {
+  --accent:  #00d4aa;
+  --accent2: #7c3aed;
+  --accent3: #f59e0b;
+  --danger:  #ef4444;
+  --success: #10b981;
+  --radius:  16px;
+  --radius-sm: 10px;
+  --tr: 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+.dark {
+  --bg:#050c1a; --bg2:#0d1b35; --bg3:#0f2347;
+  --card:rgba(13,27,53,0.85); --card-b:rgba(0,212,170,0.12);
+  --text:#e8f4fd; --text2:#8ab4d4; --text3:#4a7a9b;
+  --glow:0 0 40px rgba(0,212,170,0.15);
+}
+.light {
+  --bg:#f0f7ff; --bg2:#e1eeff; --bg3:#cde0ff;
+  --card:rgba(255,255,255,0.92); --card-b:rgba(0,100,200,0.15);
+  --text:#0d1b35; --text2:#3a5f8a; --text3:#6b9abb;
+  --glow:0 8px 40px rgba(0,100,200,0.1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
+button{cursor:pointer;border:none;outline:none;font-family:inherit}
+input,select{font-family:inherit}
+
+/* ── Background Bubbles ── */
+.app{min-height:100vh;position:relative}
+.bg-anim{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:0}
+.bubble{
+  position:absolute;border-radius:50%;
+  background:radial-gradient(circle at 30% 30%,rgba(0,212,170,0.13),rgba(124,58,237,0.07));
+  border:1px solid rgba(0,212,170,0.09);
+  animation:rise var(--dur,10s) var(--delay,0s) infinite;
+  bottom:-200px;
+}
+@keyframes rise{
+  0%{transform:translateY(0) rotate(0);opacity:0}
+  10%{opacity:1}90%{opacity:.5}
+  100%{transform:translateY(-110vh) rotate(720deg);opacity:0}
+}
+
+/* ── Header ── */
+.header{
+  position:sticky;top:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 28px;
+  background:var(--card);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--card-b);box-shadow:var(--glow);
+}
+.hdr-l,.hdr-r{display:flex;align-items:center;gap:16px}
+.logo{display:flex;align-items:center;gap:12px}
+.logo-ic{
+  width:44px;height:44px;border-radius:12px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:grid;place-items:center;font-size:1.3rem;font-weight:800;color:#fff;
+  box-shadow:0 4px 20px rgba(0,212,170,.4);
+  animation:pulse-l 3s ease-in-out infinite;
+}
+@keyframes pulse-l{0%,100%{box-shadow:0 4px 20px rgba(0,212,170,.4)}50%{box-shadow:0 4px 40px rgba(0,212,170,.7)}}
+.logo h1{font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:800;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.logo p{font-size:.7rem;color:var(--text3);letter-spacing:.05em}
+.btn-sm{padding:7px 14px;border-radius:8px;font-size:.75rem;font-weight:600;
+  background:var(--bg3);color:var(--text2);border:1px solid var(--card-b);transition:var(--tr)}
+.btn-sm:hover{background:var(--accent);color:#000;transform:translateY(-2px)}
+.dk-toggle{width:42px;height:42px;border-radius:50%;font-size:1.2rem;
+  background:var(--bg3);border:1px solid var(--card-b);transition:var(--tr);display:grid;place-items:center}
+.dk-toggle:hover{transform:rotate(20deg) scale(1.1);background:var(--accent)}
+
+/* ── Nav ── */
+.nav{
+  display:flex;overflow-x:auto;gap:4px;padding:12px 20px;
+  background:var(--bg2);border-bottom:1px solid var(--card-b);
+  position:sticky;top:72px;z-index:90;scrollbar-width:none;
+}
+.nav::-webkit-scrollbar{display:none}
+.nav-btn{
+  display:flex;align-items:center;gap:8px;padding:10px 20px;
+  border-radius:var(--radius-sm);background:transparent;color:var(--text2);
+  font-size:.85rem;font-weight:500;white-space:nowrap;transition:var(--tr);
+  border:1px solid transparent;
+}
+.nav-btn:hover{background:var(--card);color:var(--text);border-color:var(--card-b)}
+.nav-btn.active{
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:#fff;font-weight:600;box-shadow:0 4px 20px rgba(0,212,170,.35);
+}
+
+/* ── Main ── */
+.main{position:relative;z-index:1;padding:28px 24px;max-width:1400px;margin:0 auto;animation:fadeIn .4s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+
+/* ── Headings ── */
+.pg-title{font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:24px}
+.sec-title{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:16px}
+
+/* ── Card ── */
+.card{background:var(--card);border:1px solid var(--card-b);border-radius:var(--radius);
+  padding:24px;backdrop-filter:blur(12px);box-shadow:var(--glow);transition:var(--tr)}
+.card:hover{transform:translateY(-3px);box-shadow:0 12px 50px rgba(0,212,170,.12)}
+
+/* ── Grids ── */
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.g2{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
+@media(max-width:1100px){.g4{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:900px){.g3{grid-template-columns:repeat(2,1fr)}.g2{grid-template-columns:1fr}}
+@media(max-width:600px){.g4,.g3{grid-template-columns:1fr}}
+
+/* ── Summary Card ── */
+.sc{position:relative;overflow:hidden;padding:22px;border-radius:var(--radius);
+  border:1px solid var(--card-b);background:var(--card);backdrop-filter:blur(12px);transition:var(--tr)}
+.sc::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--sc-a,linear-gradient(90deg,var(--accent),var(--accent2)))}
+.sc:hover{transform:translateY(-5px) scale(1.01);box-shadow:0 20px 60px rgba(0,212,170,.15)}
+.sc-lbl{font-size:.72rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:6px}
+.sc-val{font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;color:var(--text)}
+.sc-sub{font-size:.72rem;color:var(--text3);margin-top:4px}
+.sc-ico{position:absolute;right:20px;top:20px;font-size:2rem;opacity:.2}
+.sc-tr{display:inline-flex;align-items:center;gap:4px;font-size:.72rem;font-weight:600;margin-top:8px;padding:3px 8px;border-radius:20px}
+.tr-up{background:rgba(16,185,129,.15);color:var(--success)}
+.tr-dn{background:rgba(239,68,68,.15);color:var(--danger)}
+
+/* ── Forms ── */
+.fg{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;align-items:end}
+.fgrp{display:flex;flex-direction:column;gap:6px}
+.fgrp label{font-size:.72rem;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em}
+.fi,.fs{padding:10px 14px;border-radius:var(--radius-sm);background:var(--bg3);
+  border:1px solid var(--card-b);color:var(--text);font-size:.9rem;transition:var(--tr)}
+.fi:focus,.fs:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px rgba(0,212,170,.15)}
+.fs option{background:var(--bg2)}
+
+/* ── Buttons ── */
+.btn-p{padding:11px 24px;border-radius:var(--radius-sm);font-weight:600;font-size:.9rem;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;transition:var(--tr);white-space:nowrap}
+.btn-p:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,212,170,.4)}
+.btn-d{background:rgba(239,68,68,.15);color:var(--danger);padding:6px 10px;border-radius:8px;
+  font-size:.8rem;transition:var(--tr);border:1px solid rgba(239,68,68,.2)}
+.btn-d:hover{background:var(--danger);color:#fff}
+.btn-s{background:rgba(16,185,129,.15);color:var(--success);padding:6px 12px;border-radius:8px;
+  font-size:.8rem;border:1px solid rgba(16,185,129,.2);transition:var(--tr)}
+.btn-s:hover{background:var(--success);color:#fff}
+
+/* ── Data list ── */
+.dl{display:flex;flex-direction:column;gap:10px}
+.di{display:flex;align-items:center;justify-content:space-between;
+  padding:14px 18px;border-radius:var(--radius-sm);
+  background:var(--bg3);border:1px solid var(--card-b);transition:var(--tr);
+  animation:slideIn .3s ease}
+@keyframes slideIn{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:none}}
+.di:hover{border-color:var(--accent);background:var(--bg2)}
+.di-i{display:flex;flex-direction:column;gap:3px}
+.di-t{font-weight:600;font-size:.9rem}
+.di-s{font-size:.72rem;color:var(--text3)}
+.di-r{display:flex;align-items:center;gap:12px}
+.di-a{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem}
+.ain{color:var(--success)}.aex{color:var(--danger)}
+
+/* ── Badge ── */
+.badge{padding:3px 10px;border-radius:20px;font-size:.7rem;font-weight:600;
+  background:var(--b-bg,rgba(0,212,170,.15));color:var(--b-c,var(--accent))}
+
+/* ── Progress ── */
+.pb-bg{background:var(--bg3);border-radius:99px;height:8px;overflow:hidden}
+.pb-fill{height:100%;border-radius:99px;
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+  transition:width .8s cubic-bezier(.4,0,.2,1);position:relative}
+.pb-fill::after{content:'';position:absolute;right:0;top:50%;transform:translateY(-50%);
+  width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:0 0 8px var(--accent)}
+.pb-fill.dng{background:linear-gradient(90deg,var(--danger),#f87171)}
+.pb-fill.wrn{background:linear-gradient(90deg,var(--accent3),#fb923c)}
+
+/* ── Insights ── */
+.ins{display:flex;align-items:flex-start;gap:14px;padding:16px;border-radius:var(--radius-sm);
+  background:var(--bg3);border:1px solid var(--card-b);animation:slideIn .3s ease}
+.ins-ico{font-size:1.8rem;flex-shrink:0}
+.ins-txt{font-size:.88rem;color:var(--text2);line-height:1.5}
+
+/* ── Notifications ── */
+.nc{position:fixed;top:80px;right:20px;z-index:999;display:flex;flex-direction:column;gap:10px}
+.notif{padding:14px 20px;border-radius:var(--radius-sm);min-width:280px;max-width:380px;
+  backdrop-filter:blur(20px);font-size:.875rem;font-weight:500;border:1px solid;
+  animation:nIn .4s ease,nOut .4s ease 3.6s forwards;display:flex;align-items:center;gap:10px}
+.notif.warning{background:rgba(245,158,11,.15);border-color:rgba(245,158,11,.4);color:var(--accent3)}
+.notif.success{background:rgba(16,185,129,.15);border-color:rgba(16,185,129,.4);color:var(--success)}
+@keyframes nIn{from{opacity:0;transform:translateX(80px)}to{opacity:1;transform:none}}
+@keyframes nOut{from{opacity:1}to{opacity:0;transform:translateX(80px)}}
+
+/* ── Search ── */
+.srch{display:flex;gap:12px;align-items:center;padding:12px 16px;
+  border-radius:var(--radius-sm);background:var(--bg3);border:1px solid var(--card-b);margin-bottom:18px}
+.srch input{flex:1;background:transparent;border:none;color:var(--text);font-size:.9rem}
+.srch input:focus{outline:none}
+.srch input::placeholder{color:var(--text3)}
+
+/* ── Goal card ── */
+.gc{background:var(--card);border:1px solid var(--card-b);border-radius:var(--radius);
+  padding:22px;transition:var(--tr);animation:fadeIn .4s ease}
+.gc:hover{transform:translateY(-3px);border-color:var(--accent)}
+.g-pct{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;color:var(--accent);text-align:center;margin:10px 0}
+
+/* ── Budget ── */
+.bi{padding:18px;border-radius:var(--radius-sm);background:var(--bg3);border:1px solid var(--card-b)}
+.bi-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.bi-c{font-weight:600;font-size:.9rem;display:flex;align-items:center;gap:8px}
+
+/* ── Charts ── */
+.ch-wrap{width:100%;height:300px}
+
+/* ── Empty ── */
+.empty{text-align:center;padding:50px 20px;color:var(--text3)}
+.empty .emo{font-size:3rem;margin-bottom:12px}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--accent);border-radius:3px}
+
+.mb1{margin-bottom:8px}.mb2{margin-bottom:16px}.mb3{margin-bottom:24px}
+.flex{display:flex}.gap1{gap:8px}.gap2{gap:12px}.gap3{gap:16px}
+.aic{align-items:center}.jcsb{justify-content:space-between}.fw6{font-weight:600}
+.fs8{font-size:.8rem}.fs7{font-size:.72rem}.tc3{color:var(--text3)}.tc2{color:var(--text2)}
+.wrap{flex-wrap:wrap}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useMemo, useCallback, createContext, useContext } = React;
+const { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+        LineChart, Line, AreaChart, Area, PieChart, Pie, Cell } = Recharts;
+
+/* ── CONSTANTS ── */
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const CATEGORIES = ['Food','Rent','Travel','Entertainment','Shopping','Health','Others'];
+const CAT_EMOJI  = {Food:'🍽️',Rent:'🏠',Travel:'✈️',Entertainment:'🎭',Shopping:'🛍️',Health:'💊',Others:'📦'};
+const CAT_COLORS = {
+  Food:{bg:'rgba(239,68,68,.15)',c:'#ef4444'},
+  Rent:{bg:'rgba(245,158,11,.15)',c:'#f59e0b'},
+  Travel:{bg:'rgba(59,130,246,.15)',c:'#3b82f6'},
+  Entertainment:{bg:'rgba(168,85,247,.15)',c:'#a855f7'},
+  Shopping:{bg:'rgba(236,72,153,.15)',c:'#ec4899'},
+  Health:{bg:'rgba(16,185,129,.15)',c:'#10b981'},
+  Others:{bg:'rgba(107,114,128,.15)',c:'#6b7280'},
+};
+const COLORS = ['#00d4aa','#7c3aed','#f59e0b','#ef4444','#3b82f6','#ec4899','#10b981'];
+const SOURCES = ['Salary','Freelance','Business','Investment','Gift','Other'];
+const EMOJIS  = ['🎯','💻','✈️','🏠','🚗','📱','🎓','💍','🛡️','🌴','🏋️','🎸'];
+
+const sampleIncome = [
+  {id:1,source:'Salary',amount:55000,date:'2025-03-01',note:'Monthly salary'},
+  {id:2,source:'Freelance',amount:12000,date:'2025-03-10',note:'React project'},
+  {id:3,source:'Salary',amount:55000,date:'2025-02-01',note:'Monthly salary'},
+  {id:4,source:'Investment',amount:3500,date:'2025-02-15',note:'Dividend'},
+];
+const sampleExpenses = [
+  {id:1,title:'Grocery',amount:2200,category:'Food',date:'2025-03-05'},
+  {id:2,title:'Monthly Rent',amount:12000,category:'Rent',date:'2025-03-01'},
+  {id:3,title:'Bus Pass',amount:800,category:'Travel',date:'2025-03-03'},
+  {id:4,title:'Netflix',amount:649,category:'Entertainment',date:'2025-03-07'},
+  {id:5,title:'Clothes',amount:3200,category:'Shopping',date:'2025-03-12'},
+  {id:6,title:'Medicine',amount:560,category:'Health',date:'2025-03-14'},
+  {id:7,title:'Restaurant',amount:1800,category:'Food',date:'2025-02-20'},
+  {id:8,title:'Flight Ticket',amount:4500,category:'Travel',date:'2025-02-25'},
+  {id:9,title:'Grocery',amount:1900,category:'Food',date:'2025-02-10'},
+  {id:10,title:'Rent',amount:12000,category:'Rent',date:'2025-02-01'},
+];
+const sampleGoals = [
+  {id:1,name:'Emergency Fund',target:100000,saved:45000,emoji:'🛡️'},
+  {id:2,name:'New Laptop',target:80000,saved:32000,emoji:'💻'},
+  {id:3,name:'Vacation',target:50000,saved:18000,emoji:'✈️'},
+];
+const defaultBudgets = {Food:5000,Rent:15000,Travel:3000,Entertainment:2000,Shopping:4000,Health:2000,Others:3000};
+
+/* ── CONTEXT ── */
+const FC = createContext();
+const useFinance = () => useContext(FC);
+
+function FinanceProvider({children}) {
+  const [dark, setDark]       = useState(() => JSON.parse(localStorage.getItem('dark')||'true'));
+  const [income, setIncome]   = useState(() => JSON.parse(localStorage.getItem('income')||'null')||sampleIncome);
+  const [exps, setExps]       = useState(() => JSON.parse(localStorage.getItem('exps')||'null')||sampleExpenses);
+  const [budgets, setBudgets] = useState(() => JSON.parse(localStorage.getItem('budgets')||'null')||defaultBudgets);
+  const [goals, setGoals]     = useState(() => JSON.parse(localStorage.getItem('goals')||'null')||sampleGoals);
+  const [notifs, setNotifs]   = useState([]);
+
+  useEffect(()=>{ localStorage.setItem('dark',JSON.stringify(dark)) },[dark]);
+  useEffect(()=>{ localStorage.setItem('income',JSON.stringify(income)) },[income]);
+  useEffect(()=>{ localStorage.setItem('exps',JSON.stringify(exps)) },[exps]);
+  useEffect(()=>{ localStorage.setItem('budgets',JSON.stringify(budgets)) },[budgets]);
+  useEffect(()=>{ localStorage.setItem('goals',JSON.stringify(goals)) },[goals]);
+
+  const notify = useCallback((msg, type='warning') => {
+    const id = Date.now();
+    setNotifs(n=>[...n,{id,msg,type}]);
+    setTimeout(()=>setNotifs(n=>n.filter(x=>x.id!==id)),4000);
+  },[]);
+
+  const addIncome = i => { const n={...i,id:Date.now()}; setIncome(p=>[n,...p]); notify(`Income ₹${i.amount} added!`,'success'); };
+  const delIncome = id => setIncome(p=>p.filter(i=>i.id!==id));
+
+  const addExpense = item => {
+    const n={...item,id:Date.now()};
+    const spent=exps.filter(e=>e.category===item.category).reduce((s,e)=>s+e.amount,0);
+    if(budgets[item.category]>0 && (spent+item.amount)>=budgets[item.category])
+      notify(`⚠️ Budget exceeded for ${item.category}!`,'warning');
+    setExps(p=>[n,...p]);
+  };
+  const delExpense = id => setExps(p=>p.filter(e=>e.id!==id));
+  const updBudget  = (cat,val) => setBudgets(p=>({...p,[cat]:Number(val)}));
+
+  const addGoal = g => setGoals(p=>[...p,{...g,id:Date.now()}]);
+  const updGoalSaved = (id,amt) => setGoals(p=>p.map(g=>{
+    if(g.id!==id)return g;
+    const ns=Math.min(g.saved+amt,g.target);
+    if(ns>=g.target) notify(`🎉 Goal "${g.name}" reached!`,'success');
+    return{...g,saved:ns};
+  }));
+  const delGoal = id => setGoals(p=>p.filter(g=>g.id!==id));
+
+  const totIncome  = income.reduce((s,i)=>s+i.amount,0);
+  const totExpense = exps.reduce((s,e)=>s+e.amount,0);
+  const balance    = totIncome - totExpense;
+
+  const exportData = fmt => {
+    const data={income,exps,budgets,goals};
+    if(fmt==='json'){
+      const b=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+      const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='finance.json';a.click();
+    } else {
+      const rows=[['Type','Title','Amount','Category','Date']];
+      income.forEach(i=>rows.push(['Income',i.source,i.amount,'',i.date]));
+      exps.forEach(e=>rows.push(['Expense',e.title,e.amount,e.category,e.date]));
+      const b=new Blob([rows.map(r=>r.join(',')).join('\n')],{type:'text/csv'});
+      const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='finance.csv';a.click();
+    }
+    notify('Data exported!','success');
+  };
+
+  return <FC.Provider value={{dark,setDark,income,addIncome,delIncome,exps,addExpense,delExpense,
+    budgets,updBudget,goals,addGoal,updGoalSaved,delGoal,totIncome,totExpense,balance,notifs,exportData}}>
+    {children}
+  </FC.Provider>;
+}
+
+/* ── TOOLTIP ── */
+function CTip({active,payload,label}){
+  if(!active||!payload?.length)return null;
+  return <div style={{background:'var(--card)',border:'1px solid var(--card-b)',borderRadius:10,padding:'10px 14px',fontSize:'.85rem',color:'var(--text)'}}>
+    <strong>{label}</strong>
+    {payload.map((p,i)=><div key={i} style={{color:p.color||'var(--accent)',marginTop:4}}>{p.name}: ₹{p.value?.toLocaleString()}</div>)}
+  </div>;
+}
+
+/* ── NOTIFICATIONS ── */
+function Notifs(){
+  const {notifs}=useFinance();
+  return <div className="nc">{notifs.map(n=><div key={n.id} className={`notif ${n.type}`}>{n.msg}</div>)}</div>;
+}
+
+/* ──────────────────────────────────────────
+   DASHBOARD
+────────────────────────────────────────── */
+function Dashboard(){
+  const {balance,totIncome,totExpense,income,exps,budgets}=useFinance();
+  const savRate = totIncome>0?((balance/totIncome)*100).toFixed(1):0;
+
+  const monthly = useMemo(()=>{
+    const m={};
+    income.forEach(i=>{const mo=new Date(i.date).getMonth();if(!m[mo])m[mo]={month:MONTHS[mo],income:0,expenses:0};m[mo].income+=i.amount;});
+    exps.forEach(e=>{const mo=new Date(e.date).getMonth();if(!m[mo])m[mo]={month:MONTHS[mo],income:0,expenses:0};m[mo].expenses+=e.amount;});
+    return Object.values(m).sort((a,b)=>MONTHS.indexOf(a.month)-MONTHS.indexOf(b.month));
+  },[income,exps]);
+
+  const insights = useMemo(()=>{
+    const list=[];
+    const now=new Date(),tm=now.getMonth(),lm=tm===0?11:tm-1;
+    const te=exps.filter(e=>new Date(e.date).getMonth()===tm).reduce((s,e)=>s+e.amount,0);
+    const le=exps.filter(e=>new Date(e.date).getMonth()===lm).reduce((s,e)=>s+e.amount,0);
+    if(le>0){const d=((te-le)/le*100).toFixed(1);
+      list.push(d>0?{icon:'📈',text:`You spent <strong>₹${(te-le).toLocaleString()}</strong> more this month (+${d}%).`}
+                   :{icon:'📉',text:`Great! You spent <strong>₹${Math.abs(te-le).toLocaleString()}</strong> less this month (${d}%).`});}
+    const ct={};
+    exps.filter(e=>new Date(e.date).getMonth()===tm).forEach(e=>{ct[e.category]=(ct[e.category]||0)+e.amount;});
+    const top=Object.entries(ct).sort((a,b)=>b[1]-a[1])[0];
+    if(top)list.push({icon:'🍽️',text:`Top spending: <strong>${top[0]}</strong> at ₹${top[1].toLocaleString()}.`});
+    const ov=Object.entries(budgets).filter(([c,l])=>(ct[c]||0)>l&&l>0);
+    if(ov.length)list.push({icon:'🚨',text:`Budget exceeded in: <strong>${ov.map(e=>e[0]).join(', ')}</strong>!`});
+    if(savRate>=20)list.push({icon:'🌟',text:`Excellent! You're saving <strong>${savRate}%</strong> of your income.`});
+    else if(savRate<10)list.push({icon:'⚠️',text:`Saving rate is only <strong>${savRate}%</strong>. Aim for 20%!`});
+    return list;
+  },[exps,budgets,savRate]);
+
+  return <div>
+    <h2 className="pg-title">📊 Dashboard Overview</h2>
+    <div className="g4 mb3">
+      {[
+        {label:'Total Balance',val:`₹${Math.abs(balance).toLocaleString()}`,col:balance>=0?'var(--success)':'var(--danger)',
+          sub:balance>=0?'In surplus':'In deficit',trend:`${savRate}% saving rate`,up:balance>=0,icon:'💰',
+          a:'linear-gradient(90deg,#00d4aa,#00b894)'},
+        {label:'Total Income',val:`₹${totIncome.toLocaleString()}`,col:'var(--success)',
+          sub:`${income.length} transactions`,trend:'▲ Lifetime',up:true,icon:'📥',
+          a:'linear-gradient(90deg,#10b981,#059669)'},
+        {label:'Total Expenses',val:`₹${totExpense.toLocaleString()}`,col:'var(--danger)',
+          sub:`${exps.length} transactions`,trend:'▼ Lifetime',up:false,icon:'📤',
+          a:'linear-gradient(90deg,#ef4444,#dc2626)'},
+        {label:'Net Savings',val:`₹${(totIncome-totExpense).toLocaleString()}`,col:'var(--accent2)',
+          sub:'After all expenses',trend:`🎯 ${savRate}% rate`,up:true,icon:'🏦',
+          a:'linear-gradient(90deg,#7c3aed,#6d28d9)'},
+      ].map((s,i)=><div key={i} className="sc" style={{'--sc-a':s.a}}>
+        <div className="sc-ico">{s.icon}</div>
+        <div className="sc-lbl">{s.label}</div>
+        <div className="sc-val" style={{color:s.col}}>{s.val}</div>
+        <div className="sc-sub">{s.sub}</div>
+        <div className={`sc-tr ${s.up?'tr-up':'tr-dn'}`}>{s.up?'▲':'▼'} {s.trend}</div>
+      </div>)}
+    </div>
+
+    <div className="g2 mb3">
+      <div className="card">
+        <div className="sec-title">📊 Monthly Income vs Expenses</div>
+        <div className="ch-wrap">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={monthly} margin={{top:5,right:10,left:0,bottom:5}}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.05)"/>
+              <XAxis dataKey="month" tick={{fill:'var(--text3)',fontSize:12}}/>
+              <YAxis tick={{fill:'var(--text3)',fontSize:11}} tickFormatter={v=>`₹${(v/1000).toFixed(0)}k`}/>
+              <Tooltip content={<CTip/>}/>
+              <Legend/>
+              <Bar dataKey="income" fill="#10b981" radius={[6,6,0,0]} name="Income"/>
+              <Bar dataKey="expenses" fill="#ef4444" radius={[6,6,0,0]} name="Expenses"/>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+      <div className="card">
+        <div className="sec-title">📈 Savings Trend</div>
+        <div className="ch-wrap">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={monthly} margin={{top:5,right:10,left:0,bottom:5}}>
+              <defs>
+                <linearGradient id="gInc" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#00d4aa" stopOpacity={.3}/>
+                  <stop offset="95%" stopColor="#00d4aa" stopOpacity={0}/>
+                </linearGradient>
+                <linearGradient id="gExp" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#7c3aed" stopOpacity={.3}/>
+                  <stop offset="95%" stopColor="#7c3aed" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.05)"/>
+              <XAxis dataKey="month" tick={{fill:'var(--text3)',fontSize:12}}/>
+              <YAxis tick={{fill:'var(--text3)',fontSize:11}} tickFormatter={v=>`₹${(v/1000).toFixed(0)}k`}/>
+              <Tooltip content={<CTip/>}/><Legend/>
+              <Area type="monotone" dataKey="income" stroke="#00d4aa" fill="url(#gInc)" strokeWidth={2} name="Income"/>
+              <Area type="monotone" dataKey="expenses" stroke="#7c3aed" fill="url(#gExp)" strokeWidth={2} name="Expenses"/>
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </div>
+
+    <div className="card">
+      <div className="sec-title">🧠 Smart Insights</div>
+      {insights.length===0?<div className="empty"><p>Add more transactions to see insights.</p></div>:
+        <div style={{display:'flex',flexDirection:'column',gap:12}}>
+          {insights.map((ins,i)=><div key={i} className="ins">
+            <div className="ins-ico">{ins.icon}</div>
+            <div className="ins-txt" dangerouslySetInnerHTML={{__html:ins.text}}/>
+          </div>)}
+        </div>
+      }
+    </div>
+  </div>;
+}
+
+/* ──────────────────────────────────────────
+   INCOME TRACKER
+────────────────────────────────────────── */
+function IncomeTracker(){
+  const {income,addIncome,delIncome,totIncome}=useFinance();
+  const [form,setForm]=useState({source:'Salary',amount:'',date:new Date().toISOString().split('T')[0],note:''});
+  const [search,setSearch]=useState('');
+  const [mon,setMon]=useState('all');
+
+  const filtered=useMemo(()=>income.filter(i=>{
+    const mm=mon==='all'||new Date(i.date).getMonth()===Number(mon);
+    const sm=i.source.toLowerCase().includes(search.toLowerCase())||i.note?.toLowerCase().includes(search.toLowerCase());
+    return mm&&sm;
+  }),[income,mon,search]);
+
+  const monTotals=useMemo(()=>{const m={};income.forEach(i=>{const mo=new Date(i.date).getMonth();m[mo]=(m[mo]||0)+i.amount;});return m;},[income]);
+
+  const add=()=>{if(!form.amount||isNaN(form.amount))return;addIncome({...form,amount:Number(form.amount)});setForm({source:'Salary',amount:'',date:new Date().toISOString().split('T')[0],note:''});};
+
+  return <div>
+    <h2 className="pg-title">💰 Income Tracker</h2>
+    <div className="g3 mb3">
+      {[
+        {l:'Lifetime Income',v:`₹${totIncome.toLocaleString()}`,col:'var(--success)',sub:`${income.length} entries`,a:'linear-gradient(90deg,#10b981,#059669)',ico:'📥'},
+        {l:'This Month',v:`₹${(monTotals[new Date().getMonth()]||0).toLocaleString()}`,col:'var(--accent)',sub:`${MONTHS[new Date().getMonth()]} earnings`,a:'linear-gradient(90deg,#00d4aa,#0891b2)',ico:'📅'},
+        {l:'Avg Monthly',v:`₹${Object.keys(monTotals).length>0?Math.round(totIncome/Object.keys(monTotals).length).toLocaleString():0}`,col:'var(--accent2)',sub:'Per active month',a:'linear-gradient(90deg,#7c3aed,#6d28d9)',ico:'📊'},
+      ].map((s,i)=><div key={i} className="sc" style={{'--sc-a':s.a}}><div className="sc-ico">{s.ico}</div><div className="sc-lbl">{s.l}</div><div className="sc-val" style={{color:s.col}}>{s.v}</div><div className="sc-sub">{s.sub}</div></div>)}
+    </div>
+    <div className="card mb3">
+      <div className="sec-title">➕ Add Income</div>
+      <div className="fg">
+        <div className="fgrp"><label>Source</label><select className="fs" value={form.source} onChange={e=>setForm({...form,source:e.target.value})}>{SOURCES.map(s=><option key={s}>{s}</option>)}</select></div>
+        <div className="fgrp"><label>Amount (₹)</label><input className="fi" type="number" placeholder="50000" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})}/></div>
+        <div className="fgrp"><label>Date</label><input className="fi" type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value})}/></div>
+        <div className="fgrp"><label>Note</label><input className="fi" type="text" placeholder="Optional" value={form.note} onChange={e=>setForm({...form,note:e.target.value})}/></div>
+        <div className="fgrp"><label>&nbsp;</label><button className="btn-p" onClick={add}>Add Income</button></div>
+      </div>
+    </div>
+    <div className="srch">
+      <span>🔍</span>
+      <input placeholder="Search..." value={search} onChange={e=>setSearch(e.target.value)}/>
+      <select className="fs" style={{width:140}} value={mon} onChange={e=>setMon(e.target.value)}>
+        <option value="all">All Months</option>
+        {MONTHS.map((m,i)=><option key={i} value={i}>{m}</option>)}
+      </select>
+    </div>
+    {filtered.length===0?<div className="empty"><div className="emo">💸</div><p>No income entries found.</p></div>:
+      <div className="dl">{filtered.map(item=><div key={item.id} className="di">
+        <div className="di-i"><div className="di-t">{item.source}</div><div className="di-s">📅 {item.date} {item.note&&`• ${item.note}`}</div></div>
+        <div className="di-r"><div className="di-a ain">+₹{item.amount.toLocaleString()}</div><button className="btn-d" onClick={()=>delIncome(item.id)}>🗑</button></div>
+      </div>)}</div>
+    }
+  </div>;
+}
+
+/* ──────────────────────────────────────────
+   EXPENSE TRACKER
+────────────────────────────────────────── */
+function ExpenseTracker(){
+  const {exps,addExpense,delExpense,totExpense}=useFinance();
+  const [form,setForm]=useState({title:'',amount:'',category:'Food',date:new Date().toISOString().split('T')[0]});
+  const [search,setSearch]=useState('');
+  const [fCat,setFCat]=useState('all');
+  const [fMon,setFMon]=useState('all');
+  const [sort,setSort]=useState('date');
+
+  const filtered=useMemo(()=>{
+    let l=exps.filter(e=>{
+      const c=fCat==='all'||e.category===fCat;
+      const m=fMon==='all'||new Date(e.date).getMonth()===Number(fMon);
+      const s=e.title.toLowerCase().includes(search.toLowerCase())||e.category.toLowerCase().includes(search.toLowerCase());
+      return c&&m&&s;
+    });
+    if(sort==='amount')l=[...l].sort((a,b)=>b.amount-a.amount);
+    else l=[...l].sort((a,b)=>new Date(b.date)-new Date(a.date));
+    return l;
+  },[exps,fCat,fMon,search,sort]);
+
+  const add=()=>{if(!form.title||!form.amount)return;addExpense({...form,amount:Number(form.amount)});setForm({title:'',amount:'',category:'Food',date:new Date().toISOString().split('T')[0]});};
+
+  return <div>
+    <h2 className="pg-title">💸 Expense Tracker</h2>
+    <div className="g4 mb3">
+      <div className="sc" style={{'--sc-a':'linear-gradient(90deg,#ef4444,#dc2626)'}}>
+        <div className="sc-ico">💸</div><div className="sc-lbl">Total Spent</div>
+        <div className="sc-val" style={{color:'var(--danger)'}}>₹{totExpense.toLocaleString()}</div>
+      </div>
+      {['Food','Rent','Travel'].map(cat=>{
+        const tot=exps.filter(e=>e.category===cat).reduce((s,e)=>s+e.amount,0);
+        const c=CAT_COLORS[cat];
+        return <div key={cat} className="sc" style={{'--sc-a':`linear-gradient(90deg,${c.c},${c.c}88)`}}>
+          <div className="sc-ico">{CAT_EMOJI[cat]}</div><div className="sc-lbl">{cat}</div>
+          <div className="sc-val" style={{color:c.c}}>₹{tot.toLocaleString()}</div>
+        </div>;
+      })}
+    </div>
+    <div className="card mb3">
+      <div className="sec-title">➕ Add Expense</div>
+      <div className="fg">
+        <div className="fgrp"><label>Title</label><input className="fi" type="text" placeholder="Grocery" value={form.title} onChange={e=>setForm({...form,title:e.target.value})}/></div>
+        <div className="fgrp"><label>Amount (₹)</label><input className="fi" type="number" placeholder="1500" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})}/></div>
+        <div className="fgrp"><label>Category</label><select className="fs" value={form.category} onChange={e=>setForm({...form,category:e.target.value})}>{CATEGORIES.map(c=><option key={c}>{c}</option>)}</select></div>
+        <div className="fgrp"><label>Date</label><input className="fi" type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value})}/></div>
+        <div className="fgrp"><label>&nbsp;</label><button className="btn-p" onClick={add}>Add Expense</button></div>
+      </div>
+    </div>
+    <div style={{display:'flex',gap:12,marginBottom:18,flexWrap:'wrap',alignItems:'center'}}>
+      <div className="srch" style={{flex:1,minWidth:200,marginBottom:0}}><span>🔍</span><input placeholder="Search..." value={search} onChange={e=>setSearch(e.target.value)}/></div>
+      <select className="fs" style={{width:150}} value={fCat} onChange={e=>setFCat(e.target.value)}><option value="all">All Categories</option>{CATEGORIES.map(c=><option key={c}>{c}</option>)}</select>
+      <select className="fs" style={{width:130}} value={fMon} onChange={e=>setFMon(e.target.value)}><option value="all">All Months</option>{MONTHS.map((m,i)=><option key={i} value={i}>{m}</option>)}</select>
+      <select className="fs" style={{width:120}} value={sort} onChange={e=>setSort(e.target.value)}><option value="date">Sort: Date</option><option value="amount">Sort: Amount</option></select>
+    </div>
+    <div style={{display:'flex',justifyContent:'space-between',marginBottom:14}}>
+      <span style={{fontSize:'.85rem',color:'var(--text3)'}}>{filtered.length} shown</span>
+      <span style={{fontWeight:700,color:'var(--danger)'}}>Total: ₹{filtered.reduce((s,e)=>s+e.amount,0).toLocaleString()}</span>
+    </div>
+    {filtered.length===0?<div className="empty"><div className="emo">🔍</div><p>No results.</p></div>:
+      <div className="dl">{filtered.map(item=>{const c=CAT_COLORS[item.category]||CAT_COLORS.Others;return(
+        <div key={item.id} className="di">
+          <div className="di-i"><div className="di-t">{item.title}</div><div className="di-s">📅 {item.date}</div></div>
+          <div className="di-r">
+            <span className="badge" style={{'--b-bg':c.bg,'--b-c':c.c}}>{item.category}</span>
+            <div className="di-a aex">-₹{item.amount.toLocaleString()}</div>
+            <button className="btn-d" onClick={()=>delExpense(item.id)}>🗑</button>
+          </div>
+        </div>);})}
+      </div>
+    }
+  </div>;
+}
+
+/* ──────────────────────────────────────────
+   BUDGET PLANNER
+────────────────────────────────────────── */
+function BudgetPlanner(){
+  const {budgets,updBudget,exps}=useFinance();
+  const [edits,setEdits]=useState({});
+  const tm=new Date().getMonth();
+  const catSpent=useMemo(()=>{const m={};exps.filter(e=>new Date(e.date).getMonth()===tm).forEach(e=>{m[e.category]=(m[e.category]||0)+e.amount;});return m;},[exps,tm]);
+  const save=cat=>{if(edits[cat]!==undefined){updBudget(cat,edits[cat]);setEdits(p=>{const n={...p};delete n[cat];return n;});}};
+  const totB=Object.values(budgets).reduce((s,v)=>s+v,0);
+  const totS=Object.values(catSpent).reduce((s,v)=>s+v,0);
+  const over=CATEGORIES.filter(c=>catSpent[c]>budgets[c]&&budgets[c]>0);
+
+  return <div>
+    <h2 className="pg-title">📋 Budget Planner</h2>
+    <div className="g3 mb3">
+      <div className="sc" style={{'--sc-a':'linear-gradient(90deg,#7c3aed,#6d28d9)'}}><div className="sc-ico">📋</div><div className="sc-lbl">Total Budget</div><div className="sc-val" style={{color:'var(--accent2)'}}>₹{totB.toLocaleString()}</div><div className="sc-sub">All categories</div></div>
+      <div className="sc" style={{'--sc-a':'linear-gradient(90deg,#ef4444,#dc2626)'}}><div className="sc-ico">💸</div><div className="sc-lbl">Spent This Month</div><div className="sc-val" style={{color:'var(--danger)'}}>₹{totS.toLocaleString()}</div><div className="sc-sub">{((totS/totB)*100||0).toFixed(0)}% used</div></div>
+      <div className="sc" style={{'--sc-a':over.length>0?'linear-gradient(90deg,#f59e0b,#d97706)':'linear-gradient(90deg,#10b981,#059669)'}}><div className="sc-ico">🚨</div><div className="sc-lbl">Alerts</div><div className="sc-val" style={{color:over.length>0?'var(--accent3)':'var(--success)'}}>{over.length}</div><div className="sc-sub">{over.length===0?'No overruns!':over.join(', ')+' over'}</div></div>
+    </div>
+    {over.length>0&&<div className="card mb3" style={{borderColor:'rgba(239,68,68,.3)',background:'rgba(239,68,68,.05)'}}>
+      <div style={{display:'flex',alignItems:'center',gap:12}}>
+        <span style={{fontSize:'2rem'}}>🚨</span>
+        <div><div style={{fontWeight:700,color:'var(--danger)',marginBottom:4}}>Budget Exceeded!</div>
+        <div style={{fontSize:'.875rem',color:'var(--text2)'}}>Overrun in: <strong>{over.join(', ')}</strong></div></div>
+      </div>
+    </div>}
+    <div className="g3">
+      {CATEGORIES.map(cat=>{
+        const budget=budgets[cat]||0;const spent=catSpent[cat]||0;
+        const pct=budget>0?Math.min((spent/budget)*100,100):0;
+        const isO=spent>budget&&budget>0,isW=pct>=80&&!isO;
+        return <div key={cat} className="bi">
+          <div className="bi-h">
+            <div className="bi-c"><span>{CAT_EMOJI[cat]}</span><span>{cat}</span></div>
+            {isO&&<span style={{fontSize:'.7rem',color:'var(--danger)',fontWeight:700,padding:'2px 8px',background:'rgba(239,68,68,.15)',borderRadius:20}}>OVER!</span>}
+            {isW&&<span style={{fontSize:'.7rem',color:'var(--accent3)',fontWeight:700,padding:'2px 8px',background:'rgba(245,158,11,.15)',borderRadius:20}}>⚠️</span>}
+          </div>
+          <div style={{display:'flex',justifyContent:'space-between',fontSize:'.8rem',color:'var(--text3)',marginBottom:8}}>
+            <span>Spent: <strong style={{color:isO?'var(--danger)':'var(--text)'}}>₹{spent.toLocaleString()}</strong></span>
+            <span>Budget: <strong>₹{budget.toLocaleString()}</strong></span>
+          </div>
+          <div className="pb-bg"><div className={`pb-fill ${isO?'dng':isW?'wrn':''}`} style={{width:`${pct}%`}}/></div>
+          <div style={{display:'flex',justifyContent:'space-between',fontSize:'.72rem',marginTop:6}}>
+            <span style={{color:'var(--text3)'}}>{pct.toFixed(0)}% used</span>
+            <span style={{color:(budget-spent)>=0?'var(--success)':'var(--danger)',fontWeight:600}}>
+              {(budget-spent)>=0?`₹${(budget-spent).toLocaleString()} left`:`₹${Math.abs(budget-spent).toLocaleString()} over`}
+            </span>
+          </div>
+          <div style={{display:'flex',gap:8,marginTop:10}}>
+            <input className="fi" type="number" style={{flex:1,padding:'7px 10px',fontSize:'.85rem'}} placeholder="Set budget ₹"
+              value={edits[cat]??budget} onChange={e=>setEdits(p=>({...p,[cat]:e.target.value}))}/>
+            <button className="btn-s" onClick={()=>save(cat)}>Save</button>
+          </div>
+        </div>;
+      })}
+    </div>
+  </div>;
+}
+
+/* ──────────────────────────────────────────
+   ANALYTICS
+────────────────────────────────────────── */
+function Analytics(){
+  const {income,exps,totExpense}=useFinance();
+
+  const pie=useMemo(()=>{
+    const m={};exps.forEach(e=>{m[e.category]=(m[e.category]||0)+e.amount;});
+    return Object.entries(m).map(([n,v])=>({name:n,value:v,percent:((v/totExpense)*100).toFixed(1)})).sort((a,b)=>b.value-a.value);
+  },[exps,totExpense]);
+
+  const line=useMemo(()=>{
+    const m={};
+    income.forEach(i=>{const mo=new Date(i.date).getMonth();if(!m[mo])m[mo]={month:MONTHS[mo],income:0,expenses:0};m[mo].income+=i.amount;});
+    exps.forEach(e=>{const mo=new Date(e.date).getMonth();if(!m[mo])m[mo]={month:MONTHS[mo],income:0,expenses:0};m[mo].expenses+=e.amount;});
+    return Object.values(m).map(d=>({...d,savings:d.income-d.expenses})).sort((a,b)=>MONTHS.indexOf(a.month)-MONTHS.indexOf(b.month));
+  },[income,exps]);
+
+  const catM=useMemo(()=>{
+    const mons=[...new Set(exps.map(e=>new Date(e.date).getMonth()))].sort();
+    return mons.map(m=>{const r={month:MONTHS[m]};CATEGORIES.forEach(c=>{r[c]=exps.filter(e=>new Date(e.date).getMonth()===m&&e.category===c).reduce((s,e)=>s+e.amount,0);});return r;});
+  },[exps]);
+
+  return <div>
+    <h2 className="pg-title">📈 Analytics</h2>
+    <div className="g2 mb3">
+      <div className="card">
+        <div className="sec-title">🥧 Expense by Category</div>
+        {pie.length===0?<div className="empty"><div className="emo">📊</div><p>No data yet.</p></div>:<>
+          <div style={{height:280}}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={pie} cx="50%" cy="50%" innerRadius={60} outerRadius={110} paddingAngle={3} dataKey="value">
+                  {pie.map((_,i)=><Cell key={i} fill={COLORS[i%COLORS.length]}/>)}
+                </Pie>
+                <Tooltip formatter={(v,n,p)=>[`₹${v.toLocaleString()} (${p.payload.percent}%)`,n]}/>
+                <Legend formatter={v=><span style={{color:'var(--text2)',fontSize:'.8rem'}}>{v}</span>}/>
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div style={{display:'flex',flexDirection:'column',gap:8,marginTop:12}}>
+            {pie.map((d,i)=><div key={d.name} style={{display:'flex',alignItems:'center',gap:10}}>
+              <div style={{width:10,height:10,borderRadius:'50%',background:COLORS[i%COLORS.length],flexShrink:0}}/>
+              <span style={{flex:1,fontSize:'.82rem',color:'var(--text2)'}}>{d.name}</span>
+              <span style={{fontSize:'.82rem',fontWeight:600}}>₹{d.value.toLocaleString()}</span>
+              <span style={{fontSize:'.72rem',color:'var(--text3)',width:38,textAlign:'right'}}>{d.percent}%</span>
+            </div>)}
+          </div>
+        </>}
+      </div>
+      <div className="card">
+        <div className="sec-title">📉 Monthly Financial Trend</div>
+        {line.length===0?<div className="empty"><div className="emo">📈</div><p>No data yet.</p></div>:
+          <div style={{height:320}}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={line} margin={{top:5,right:10,left:0,bottom:5}}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.05)"/>
+                <XAxis dataKey="month" tick={{fill:'var(--text3)',fontSize:12}}/>
+                <YAxis tick={{fill:'var(--text3)',fontSize:11}} tickFormatter={v=>`₹${(v/1000).toFixed(0)}k`}/>
+                <Tooltip content={<CTip/>}/><Legend/>
+                <Line type="monotone" dataKey="income" stroke="#10b981" strokeWidth={2.5} dot={{fill:'#10b981',r:4}} name="Income"/>
+                <Line type="monotone" dataKey="expenses" stroke="#ef4444" strokeWidth={2.5} dot={{fill:'#ef4444',r:4}} name="Expenses"/>
+                <Line type="monotone" dataKey="savings" stroke="#7c3aed" strokeWidth={2.5} dot={{fill:'#7c3aed',r:4}} name="Savings" strokeDasharray="5 5"/>
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        }
+      </div>
+    </div>
+    <div className="card">
+      <div className="sec-title">📊 Category Spending by Month</div>
+      {catM.length===0?<div className="empty"><p>No data yet.</p></div>:
+        <div style={{height:320}}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={catM} margin={{top:5,right:10,left:0,bottom:5}}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.05)"/>
+              <XAxis dataKey="month" tick={{fill:'var(--text3)',fontSize:12}}/>
+              <YAxis tick={{fill:'var(--text3)',fontSize:11}} tickFormatter={v=>`₹${(v/1000).toFixed(0)}k`}/>
+              <Tooltip content={<CTip/>}/><Legend/>
+              {CATEGORIES.map((cat,i)=><Bar key={cat} dataKey={cat} fill={COLORS[i%COLORS.length]} stackId="a" radius={i===CATEGORIES.length-1?[4,4,0,0]:[0,0,0,0]}/>)}
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      }
+    </div>
+  </div>;
+}
+
+/* ──────────────────────────────────────────
+   SAVINGS GOALS
+────────────────────────────────────────── */
+function SavingsGoals(){
+  const {goals,addGoal,updGoalSaved,delGoal}=useFinance();
+  const [form,setForm]=useState({name:'',target:'',saved:'',emoji:'🎯'});
+  const [deps,setDeps]=useState({});
+
+  const add=()=>{if(!form.name||!form.target)return;addGoal({...form,target:Number(form.target),saved:Number(form.saved||0)});setForm({name:'',target:'',saved:'',emoji:'🎯'});};
+  const deposit=(id)=>{const a=Number(deps[id]||0);if(a<=0)return;updGoalSaved(id,a);setDeps(p=>({...p,[id]:'';}));};
+
+  const totT=goals.reduce((s,g)=>s+g.target,0);
+  const totS=goals.reduce((s,g)=>s+g.saved,0);
+
+  return <div>
+    <h2 className="pg-title">🎯 Savings Goals</h2>
+    <div className="g3 mb3">
+      <div className="sc" style={{'--sc-a':'linear-gradient(90deg,#00d4aa,#0891b2)'}}><div className="sc-ico">🎯</div><div className="sc-lbl">Total Goals</div><div className="sc-val" style={{color:'var(--accent)'}}>{goals.length}</div><div className="sc-sub">Active goals</div></div>
+      <div className="sc" style={{'--sc-a':'linear-gradient(90deg,#7c3aed,#6d28d9)'}}><div className="sc-ico">💰</div><div className="sc-lbl">Total Saved</div><div className="sc-val" style={{color:'var(--accent2)'}}>₹{totS.toLocaleString()}</div><div className="sc-sub">of ₹{totT.toLocaleString()}</div></div>
+      <div className="sc" style={{'--sc-a':'linear-gradient(90deg,#10b981,#059669)'}}><div className="sc-ico">📊</div><div className="sc-lbl">Overall Progress</div><div className="sc-val" style={{color:'var(--success)'}}>{totT>0?((totS/totT)*100).toFixed(1):0}%</div><div className="sc-sub">Across all goals</div></div>
+    </div>
+    <div className="card mb3">
+      <div className="sec-title">➕ Add New Goal</div>
+      <div className="fg">
+        <div className="fgrp"><label>Goal Name</label><input className="fi" type="text" placeholder="New Laptop" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></div>
+        <div className="fgrp"><label>Target (₹)</label><input className="fi" type="number" placeholder="50000" value={form.target} onChange={e=>setForm({...form,target:e.target.value})}/></div>
+        <div className="fgrp"><label>Already Saved (₹)</label><input className="fi" type="number" placeholder="0" value={form.saved} onChange={e=>setForm({...form,saved:e.target.value})}/></div>
+        <div className="fgrp"><label>Emoji</label><select className="fs" value={form.emoji} onChange={e=>setForm({...form,emoji:e.target.value})}>{EMOJIS.map(e=><option key={e} value={e}>{e}</option>)}</select></div>
+        <div className="fgrp"><label>&nbsp;</label><button className="btn-p" onClick={add}>Add Goal</button></div>
+      </div>
+    </div>
+    {goals.length===0?<div className="empty"><div className="emo">🎯</div><p>No goals yet!</p></div>:
+      <div className="g3">{goals.map(g=>{
+        const pct=Math.min((g.saved/g.target)*100,100);const done=g.saved>=g.target;
+        return <div key={g.id} className="gc" style={done?{borderColor:'var(--success)',boxShadow:'0 0 20px rgba(16,185,129,.2)'}:{}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+            <div style={{fontSize:'2.5rem'}}>{g.emoji}</div>
+            <div style={{display:'flex',gap:8,alignItems:'center'}}>
+              {done&&<span style={{fontSize:'.7rem',color:'var(--success)',fontWeight:700,padding:'2px 10px',background:'rgba(16,185,129,.15)',borderRadius:20}}>✅ DONE!</span>}
+              <button className="btn-d" onClick={()=>delGoal(g.id)}>🗑</button>
+            </div>
+          </div>
+          <div style={{fontFamily:'Syne,sans-serif',fontWeight:700,fontSize:'1rem',marginBottom:4}}>{g.name}</div>
+          <div className="g-pct">{pct.toFixed(0)}%</div>
+          <div className="pb-bg" style={{marginBottom:10}}><div className="pb-fill" style={{width:`${pct}%`,background:done?'linear-gradient(90deg,var(--success),#34d399)':undefined}}/></div>
+          <div style={{display:'flex',justifyContent:'space-between',fontSize:'.8rem',color:'var(--text3)',marginBottom:8}}>
+            <span>Saved: <strong style={{color:'var(--success)'}}>₹{g.saved.toLocaleString()}</strong></span>
+            <span>Target: <strong>₹{g.target.toLocaleString()}</strong></span>
+          </div>
+          {!done&&<div style={{display:'flex',gap:8}}>
+            <input className="fi" type="number" placeholder="Add ₹" style={{flex:1,padding:'7px 10px',fontSize:'.85rem'}} value={deps[g.id]||''} onChange={e=>setDeps(p=>({...p,[g.id]:e.target.value}))} onKeyDown={e=>e.key==='Enter'&&deposit(g.id)}/>
+            <button className="btn-s" onClick={()=>deposit(g.id)}>+Add</button>
+          </div>}
+        </div>;
+      })}</div>
+    }
+  </div>;
+}
+
+/* ──────────────────────────────────────────
+   APP ROOT
+────────────────────────────────────────── */
+const TABS=[
+  {id:'dashboard',l:'Dashboard',i:'📊'},
+  {id:'income',l:'Income',i:'💰'},
+  {id:'expenses',l:'Expenses',i:'💸'},
+  {id:'budget',l:'Budget',i:'📋'},
+  {id:'analytics',l:'Analytics',i:'📈'},
+  {id:'goals',l:'Goals',i:'🎯'},
+];
+
+function AppInner(){
+  const [tab,setTab]=useState('dashboard');
+  const {dark,setDark,exportData}=useFinance();
+
+  return <div className={`app ${dark?'dark':'light'}`}>
+    <div className="bg-anim">
+      {[...Array(20)].map((_,i)=><span key={i} className="bubble" style={{
+        '--dur':`${8+i*1.2}s`,'--delay':`${i*0.5}s`,
+        width:`${20+i*12}px`,height:`${20+i*12}px`,
+        left:`${i*5}%`,
+      }}/>)}
+    </div>
+    <Notifs/>
+    <header className="header">
+      <div className="hdr-l">
+        <div className="logo">
+          <div className="logo-ic">₹</div>
+          <div><h1>FinanceFlow</h1><p>Personal Finance Dashboard</p></div>
+        </div>
+      </div>
+      <div className="hdr-r">
+        <button className="btn-sm" onClick={()=>exportData('csv')}>⬇ CSV</button>
+        <button className="btn-sm" onClick={()=>exportData('json')}>⬇ JSON</button>
+        <button className="dk-toggle" onClick={()=>setDark(!dark)}>{dark?'☀️':'🌙'}</button>
+      </div>
+    </header>
+    <nav className="nav">
+      {TABS.map(t=><button key={t.id} className={`nav-btn ${tab===t.id?'active':''}`} onClick={()=>setTab(t.id)}>
+        <span>{t.i}</span><span>{t.l}</span>
+      </button>)}
+    </nav>
+    <main className="main">
+      {tab==='dashboard'&&<Dashboard/>}
+      {tab==='income'&&<IncomeTracker/>}
+      {tab==='expenses'&&<ExpenseTracker/>}
+      {tab==='budget'&&<BudgetPlanner/>}
+      {tab==='analytics'&&<Analytics/>}
+      {tab==='goals'&&<SavingsGoals/>}
+    </main>
+  </div>;
+}
+
+function App(){
+  return <FinanceProvider><AppInner/></FinanceProvider>;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
